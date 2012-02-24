@@ -1,40 +1,20 @@
 (function ($) {
+
   $.fn.domo = function(object) {
     // ## Object to DOM ##
     if (typeof object == 'object') {
-      $('[type=checkbox], [type=radio]', this).removeAttr('checked');
-      $('option', this).removeAttr('selected');
+      var thisParent = $(this).parent();
+      var $this = $(this).detach();
 
-      var stringDom = function(who) { return $("<div />").html(who).html() };
-
-      var applyValues = function(who, object, prop) {
-        $.isPlainObject(object[prop]) ? who.domo(object[prop]) :
-        $.isArray(object[prop]) && !who.is('[type=radio]') ? doArray(who, object[prop]) :
-        who.is('select') ? who.find("option[value='" + object[prop] + "'], option:contains('" + object[prop] + "')").attr('selected', 'true') :
-        who.is('[type=checkbox]') ? who.attr('checked', object[prop]) :
-        who.is('[type=radio]') ? who.filter("[value=" + object[prop] + "]").attr("checked", true) :
-        who.is('input') ? who.attr('value', object[prop]) : who.html(object[prop]);
-      }
-
-      var doArray = function(who, arr) {
-        var container = $("<div />");
-        
-        for (var i = 0; i < arr.length; i++) {
-          var clone = who.eq(0).clone();
-          applyValues(clone, arr, i)
-          container.append(stringDom(clone));
-        }
-        
-        if (who.length > 1) who.replaceWith(who.eq(0));
-        who.replaceWith(container.html());
-      }
+      $('[type=checkbox], [type=radio]', $this).removeAttr('checked');
+      $('option', $this).removeAttr('selected');
 
       for (var prop in object) {
-        var who = ( $("[name='" + prop + "']", this).length ) ? $("[name='" + prop + "']", this) : $("[name='" + prop + "[]']", this);
-        applyValues(who, object, prop)
+        var who = ( $("[name='" + prop + "']", $this).length ) ? $("[name='" + prop + "']", $this) : $("[name='" + prop + "[]']", $this);
+        applyValues(who, object, prop);
       }
 
-      return this;
+      return $this.appendTo(thisParent);
 
     } else {
       // ## DOM to object ##
@@ -83,15 +63,42 @@
     });
   }
 
-  var verifyChanges = function() {
+  function applyValues(who, object, prop) {
+    $.isPlainObject(object[prop]) ? who.domo(object[prop]) :
+    $.isArray(object[prop]) && !who.is('[type=radio]') ? doArray(who, object[prop]) :
+    who.is('select') ? who.find("option[value='" + object[prop] + "'], option:contains('" + object[prop] + "')").attr('selected', 'true') :
+    who.is('[type=checkbox]') ? who.attr('checked', object[prop]) :
+    who.is('[type=radio]') ? who.filter("[value=" + object[prop] + "]").attr("checked", true) :
+    who.is('input') ? who.attr('value', object[prop]) : who.html(object[prop]);
+  }
+
+  function doArray(who, arr) {
+    var container = $("<div />");
+        
+    for (var i = 0; i < arr.length; i++) {
+        var clone = who.eq(0).clone();
+        applyValues(clone, arr, i)
+        container.append(clone.outerHTML);
+    }
+        
+    if (who.length > 1) who.replaceWith(who.eq(0));
+    who.replaceWith(container.html());
+  }
+
+  $.fn.outerHTML = $.fn.outerHTML || ((document.outerHTML) ? 
+    function() { return this.get(0).outerHTML;}: 
+    function() { return $('<div>').append(this).html(); });
+  
+  $(document).ready(function() {
+    $.domo();
+    setInterval(verifyChanges, 100);
+  });
+
+  function verifyChanges() {
     if (JSON.stringify(window.domo.body) != window.domo.sync) {
       $("body").domo( window.domo.body );
       $.domo();
     }
   };
 
-  $(document).ready(function() {
-    $.domo();
-    setInterval(verifyChanges, 100);
-  });
 })(jQuery);
